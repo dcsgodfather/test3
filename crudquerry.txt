@@ -1,0 +1,198 @@
+//controller - PersonController
+
+<?php
+
+namespace App\Http\Controllers;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class PersonController extends Controller
+{
+    //
+    function loadView()
+    {
+        $data= DB::table('person')->get();
+        return view('person',['Person'=>$data]);
+    }
+    
+    function performCRUD(Request $req)
+    {
+        if($req->operation=="Insert")
+        {
+            $address=addslashes($req->txtAddress);
+            $hobby="";
+             foreach($req->hobby as $h)
+            {
+                $hobby.=$h.",";
+            }
+            $file=request()->Photo;
+            // $ext=$req->Photo->getClientOriginalExtension();
+            // $basename=substr($file,0,stripos($file,'.'));
+            // $newfilename=md5($basename).time().rand(5,1000).'.'.$ext; 
+            // $req->Photo->move(public_path('uploads'),$newfilename);
+            DB::table('person')->insert([
+                'Name'=>$req->txtName,
+                'Password'=>$req->txtPassword,
+                'Gender'=>$req->Gender,
+                'Address'=>$address,
+                'Email'=>$req->txtEmail,
+                'Hobby'=>$hobby,
+                'Country'=>$req->country,
+                'Photo'=>$file
+            ]);
+            return redirect('view1');
+        }
+
+        if($req->operation=='Update')
+        {
+            DB::table('person')->where('ID',$req->txtId)
+            ->update([
+                'Name'=>$req->txtName,
+                'Password'=>$req->txtPassword,
+                'Gender'=>$req->gander,
+                'Address'=>$address,
+                'Email'=>$req->txtEmail,
+                'Hobby'=>$hobby,
+                'Country'=>$req->country,
+                //'Photo'=>$newfilename
+            ]);
+            
+        }
+        return redirect('view1');
+    }
+
+    function deleteData($id)
+    {
+        DB::table('person')->where('ID',$id)->delete();
+        return redirect('view1');
+    }
+
+    function editData($id)
+    {
+        $record=DB::table('person')->where('ID',$id)->get();
+        $r=$record[0];
+        $data=DB::table('person')->get();
+        return view('person',['Person'=>$data,'Record'=>$r]);
+    }
+}
+
+
+//web/routes
+
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PersonController;
+
+/*
+|--------------------------------------------------------------------------
+| Web Routes
+|--------------------------------------------------------------------------
+|
+| Here is where you can register web routes for your application. These
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
+|
+*/
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('view1',[PersonController::class,'loadview']);
+Route::post('performCRUD',[PersonController::class,'performCRUD']);
+Route::get('editData',[PersonController::class,'editData']);
+Route::get('deleteData',[PersonController::class,'deleteData']);
+
+
+
+//view  - persone.blade.php
+
+<h1> Person Registration </h1>
+
+<form method="POST" action="{{URL::to('performCRUD')}}" enctypr="multipart/form">
+@csrf
+
+<table border="2">
+    
+    <input type="hidden" name="txtID" value="@isset($Record) {{$Record['ID']}} @endisset">
+    <tr>
+        <td>Name</td>
+        <td><input type="text" name="txtName" value="@isset($Record) {{$Record['Password']}} @endisset"></td>
+    </tr>
+    <tr>
+        <td>Password</td>
+        <td><input type="password" name="txtPassword" value=""></td>
+    </tr>
+    <tr>
+        <td>Retype Password</td>
+        <td><input type="password" name="txtRePassword" ></td>
+    </tr>
+    <tr>
+        <td>Gander</td>
+        <td><input type="radio" name="Gender" value="Male" >Male <br>
+        <input type="radio" name="Gender" value="Female" >Female</td>
+    </tr>
+    <tr>
+        <td>Address</td>
+        <td><textarea rows="7" cols="50" name="txtAddress" id="txtAddress"  value="@isset($Record) {{$Record['Address']}} @endisset">
+        </textarea></td>
+    </tr>
+    <tr>
+        <td>Email</td>
+        <td><input type="email" name="txtEmail" value="@isset($Record) {{$Record['Email']}} @endisset"></td>
+    </tr>
+    <tr>
+        <td>Hobby</td>
+        <td><input type="checkbox" name="hobby[]" value="Swimming">Swimming
+        <input type="checkbox" name="hobby[]" value="Dancing">Dancing
+        <input type="checkbox" name="hobby[]" value="Reading">Reading</td>
+    </tr>
+    <tr>
+        <td>Country</td>
+        <td><select name="country" selected="@isset($Record) {{$Record['Country']}} @endisset">
+        <option value="India">India</option>
+        <option value="India">USA</option>
+        </select></td>
+    </tr>
+    <tr>
+        <td>Photo</td>
+        <td><input type="file" name="txtPhoto"></td>
+    </tr>
+    <tr>
+        <td colspan="2"><input type="submit" name="operation" value="Insert">
+        <input type="submit" name="operation" value="Update"></td>
+    </tr>
+</table>
+</form>
+
+
+<table border="1">
+    <tr>
+        <td>ID</td>
+        <td>Name</td>
+        <td>Gander</td>
+        <td>Address</td>
+        <td>Email</td>
+        <td>Hobby</td>
+        <td>Country</td>
+        <td>Photo</td>
+        <td >Opration</td>
+    </tr>
+    
+    @foreach($Person as $p)
+    <tr>
+        <td>{{$p->ID}}</td>
+        <td>{{$p->Name}}</td>
+        <td>{{$p->Gender}}</td>
+        <td>{{$p->Address}}</td>
+        <td>{{$p->Email}}</td>
+        <td>{{$p->Hobby}}</td>
+        <td>{{$p->Country}}</td>
+        <td><img src="{{asset('/uploads/'.$p->Photo)}}" height="70" width="70"></td>
+        <td colspan="2"><a href="deleteData/{{$p->ID}}">Delete</a></td>
+        <td><a href="editData/{{$p->ID}}">Edit</a></td>
+
+    </tr>
+    @endforeach
+</table>
